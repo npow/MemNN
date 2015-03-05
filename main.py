@@ -76,7 +76,7 @@ def get_train(U_Ot, U_R, lenW, n_facts):
         lambda r_bar, t: T.largest(gamma - sR(r_args, r_t, L, V) + sR(r_args, t, L, V), 0),
         sequences=[V, T.arange(T.shape(V)[0])])
 
-    cost = cost1.sum() - 5*gamma
+    cost = cost1.sum() - (2*(len(m)-1) + 1) * gamma
     for c in cost_arr:
         cost += c.sum()
 
