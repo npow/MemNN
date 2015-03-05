@@ -10,10 +10,12 @@ import theano
 import theano.tensor as T
 import pyprind
 
-TRAIN_FILE='data/en/qa2_two-supporting-facts_train.txt' #sys.argv[1]
-TEST_FILE='data/en/qa2_two-supporting-facts_test.txt' #sys.argv[2]
-print "train: ", TRAIN_FILE
-print "test: ", TEST_FILE
+TRAIN_FILE='data/en/qa2_two-supporting-facts_train.txt'
+TEST_FILE='data/en/qa2_two-supporting-facts_test.txt'
+TRAIN_FILE = sys.argv[1]
+TEST_FILE = sys.argv[2]
+#print "train: ", TRAIN_FILE
+#print "test: ", TEST_FILE
 
 D = 50
 gamma = 0.1
@@ -105,7 +107,7 @@ def get_lines(fname):
             lines.append({'id':id, 'type':'q', 'text': line[:idx], 'answer': tmp[1].strip(), 'refs': [int(x) for x in tmp[2:][0].split(' ')]})
     return np.array(lines)
 
-def do_train(fname, vectorizer):    
+def do_train(lines, L, vectorizer):
     def phi_x1(x_t, L):
         return np.concatenate([L[x_t].reshape((-1,)), zeros((2*lenW,)), zeros((3,))], axis=0)
     def phi_x2(x_t, L):
@@ -131,8 +133,6 @@ def do_train(fname, vectorizer):
             result += np.dot(np.dot(x.reshape((1,-1)), U.T), np.dot(U, y - yp + phi_t(x_t, y_t, yp_t, L)))
         return result
 
-    lines = get_lines(fname)
-    L = vectorizer.fit_transform([x['text'] for x in lines]).toarray().astype(np.float32)
     lenW = len(vectorizer.vocabulary_)
     H = {}
     for i,v in enumerate(vectorizer.vocabulary_):
@@ -144,7 +144,7 @@ def do_train(fname, vectorizer):
     U_R = theano.shared(np.random.randn(D, W).astype(np.float32))
     train = get_train(U_Ot, U_R, lenW)
 
-    for epoch in range(10):
+    for epoch in range(100):
         total_err = 0
         print "*" * 80
         print "epoch: ", epoch
@@ -155,43 +155,44 @@ def do_train(fname, vectorizer):
                 refs = line['refs']
                 f1 = refs[0]-1
                 f2 = refs[1]-1 if len(refs) > 1 else -1
-                id = line['id']
-                indices = [idx for idx in range(i-id+1, i+1)]# if lines[idx]['type'] != 'q' or idx == i]
+                id = line['id']-1
+                offset = i-id
+                indices = [idx for idx in range(offset-1, i+1) if lines[idx]['type'] != 'q' or idx == i]
                 memory_list = L[indices]
+                id, f1, f2 = indices.index(offset+id), indices.index(offset+f1), indices.index(offset+f2)
 
-                m_o1 = O_t([id-1], memory_list, s_Ot)
+                m_o1 = O_t([id], memory_list, s_Ot)
                 if f2 != -1:
-                    m_o2 = O_t([id-1, m_o1], memory_list, s_Ot)
+                    m_o2 = O_t([id, m_o1], memory_list, s_Ot)
                 else:
                     m_o2 = -1
 
-                err = train(id-1, f1, f2, H[line['answer']], m_o1, m_o2, gamma, memory_list, V)[0]
+                err = train(id, f1, f2, H[line['answer']], m_o1, m_o2, gamma, memory_list, V)[0]
                 total_err += err
         print "epoch: ", epoch, " err: ", (total_err/len(lines))
     return U_Ot, U_R, V, H, phi_x1, phi_x2, phi_y, phi_t, s_Ot, sR
 
-def do_test(fname, vectorizer, U_Ot, U_R, V, H, phi_x1, phi_x2, phi_y, phi_t, s_Ot, sR):
+def do_test(lines, L, vectorizer, U_Ot, U_R, V, H, phi_x1, phi_x2, phi_y, phi_t, s_Ot, sR):
     lenW = len(vectorizer.vocabulary_)
-    lines = get_lines(fname)
-    L = vectorizer.transform([x['text'] for x in lines]).toarray().astype(np.float32)
-
     W = 3*lenW
     Y_true = []
     Y_pred = []
     for i,line in enumerate(lines):
         if line['type'] == 'q':
             r = line['answer']
-            id = line['id']
-            indices = [idx for idx in range(i-id+1, i+1)]# if lines[idx]['type'] != 'q' or idx == i]
+            id = line['id']-1
+            offset = i-id
+            indices = [idx for idx in range(offset-1, i+1) if lines[idx]['type'] != 'q' or idx == i]
             memory_list = L[indices]
+            id = indices.index(offset+id)
 
-            m_o1 = O_t([id-1], memory_list, s_Ot)
-            m_o2 = O_t([id-1, m_o1], memory_list, s_Ot)
+            m_o1 = O_t([id], memory_list, s_Ot)
+            m_o2 = O_t([id, m_o1], memory_list, s_Ot)
 
             bestVal = None
             best = None
             for w in vectorizer.vocabulary_:
-                val = sR([id-1, m_o1, m_o2], H[w], memory_list, V)
+                val = sR([id, m_o1, m_o2], H[w], memory_list, V)
                 if bestVal is None or val > bestVal:
                     bestVal = val
                     best = w
@@ -200,8 +201,12 @@ def do_test(fname, vectorizer, U_Ot, U_R, V, H, phi_x1, phi_x2, phi_y, phi_t, s_
     print metrics.classification_report(Y_true, Y_pred)
 
 def main():
+    train_lines, test_lines = get_lines(TRAIN_FILE), get_lines(TEST_FILE)
+    lines = np.concatenate([train_lines, test_lines], axis=0)
     vectorizer = CountVectorizer()
-    U_Ot, U_R, V, H, phi_x1, phi_x2, phi_y, phi_t, s_Ot, sR = do_train(TRAIN_FILE, vectorizer)
-    do_test(TEST_FILE, vectorizer, U_Ot, U_R, V, H, phi_x1, phi_x2, phi_y, phi_t, s_Ot, sR)
+    L = vectorizer.fit_transform([x['text'] for x in lines]).toarray().astype(np.float32)
+    L_train, L_test = L[xrange(len(train_lines))], L[xrange(len(test_lines),len(lines))]
+    U_Ot, U_R, V, H, phi_x1, phi_x2, phi_y, phi_t, s_Ot, sR = do_train(train_lines, L_train, vectorizer)
+    do_test(test_lines, L_test, vectorizer, U_Ot, U_R, V, H, phi_x1, phi_x2, phi_y, phi_t, s_Ot, sR)
 
 main()
