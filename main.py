@@ -41,9 +41,8 @@ def get_train(U_Ot, U_R, lenW, n_facts):
         return T.concatenate([zeros(3*lenW,), T.stack(T.switch(T.lt(x_t,y_t), 1, 0), T.switch(T.lt(x_t,yp_t), 1, 0), T.switch(T.lt(y_t,yp_t), 1, 0))], axis=0)
     def s_Ot(xs, y_t, yp_t, L):
         result, updates = theano.scan(
-            lambda x_t, t: T.switch(T.eq(t, T.shape(L)[0]-1), 0,
-                T.dot(T.dot(T.switch(T.eq(t, 0), phi_x1(x_t, L).reshape((1,-1)), phi_x2(x_t, L).reshape((1,-1))), U_Ot.T),
-                T.dot(U_Ot, (phi_y(y_t, L) - phi_y(yp_t, L) + phi_t(x_t, y_t, yp_t, L))))),
+            lambda x_t, t: T.dot(T.dot(T.switch(T.eq(t, 0), phi_x1(x_t, L).reshape((1,-1)), phi_x2(x_t, L).reshape((1,-1))), U_Ot.T),
+                           T.dot(U_Ot, (phi_y(y_t, L) - phi_y(yp_t, L) + phi_t(x_t, y_t, yp_t, L)))),
             sequences=[xs, T.arange(T.shape(xs)[0])])
         return result.sum()
     def sR(xs, y_t, L, V):
@@ -121,8 +120,6 @@ def do_train(lines, L, vectorizer):
     def s_Ot(xs, y_t, yp_t, L):
         result = 0
         for i,x_t in enumerate(xs):
-            if i == len(xs)-1:
-                continue
             x = phi_x1(x_t, L) if i == 0 else phi_x2(x_t, L)
             y = phi_y(y_t, L)
             yp = phi_y(yp_t, L)
