@@ -88,7 +88,7 @@ def get_train(U_Ot, U_R, lenW):
     train = theano.function(
         inputs=[x_t, f1_t, f2_t, r_t, m_o1, m_o2, gamma, L, V],
         outputs=[cost],
-        updates=[(U_Ot, U_Ot-0.01*g_uo), (U_R, U_R-0.01*g_ur)])
+        updates=[(U_Ot, U_Ot-0.001*g_uo), (U_R, U_R-0.001*g_ur)])
     return train
 
 def get_lines(fname):
@@ -149,7 +149,7 @@ def do_train(fname, vectorizer):
         print "*" * 80
         print "epoch: ", epoch
         for i,line in enumerate(lines):
-            if i % 100 == 0:
+            if i % 1000 == 0:
                 print i
             if line['type'] == 'q':
                 refs = line['refs']
