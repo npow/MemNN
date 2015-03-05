@@ -137,8 +137,8 @@ def do_train(lines, L, vectorizer):
     V = vectorizer.transform([v for v in vectorizer.vocabulary_]).toarray().astype(np.float32)
 
     W = 3*lenW + 3
-    U_Ot = theano.shared(np.zeros((D, W)).astype(np.float32))
-    U_R = theano.shared(np.zeros((D, W)).astype(np.float32))
+    U_Ot = theano.shared(np.random.randn(D, W).astype(np.float32))
+    U_R = theano.shared(np.random.randn(D, W).astype(np.float32))
     train = None
 
     for epoch in range(100):
