@@ -24,8 +24,8 @@ def zeros(shape, dtype=np.float32):
     return np.zeros(shape, dtype)
 
 def O_t(xs, L, s):
-    t = len(L)-2
-    for i in xrange(len(L)-3, -1, -1):
+    t = 0
+    for i in xrange(len(L)-1):
         if s(xs, i, t, L) > 0:
             t = i
     return t
