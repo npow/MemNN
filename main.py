@@ -138,7 +138,7 @@ def do_train(lines, L, vectorizer):
     U_R = theano.shared(np.random.randn(D, W).astype(np.float32))
     train = None
 
-    for epoch in range(100):
+    for epoch in range(10):
         total_err = 0
         print "*" * 80
         print "epoch: ", epoch
