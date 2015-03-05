@@ -24,13 +24,13 @@ def zeros(shape, dtype=np.float32):
     return np.zeros(shape, dtype)
 
 def O_t(xs, L, s):
-    t = 0
-    for i in xrange(1, len(L)):
+    t = len(L)-2
+    for i in xrange(len(L)-3, -1, -1):
         if s(xs, i, t, L) > 0:
             t = i
     return t
 
-def get_train(U_Ot, U_R, lenW):
+def get_train(U_Ot, U_R, lenW, n_facts):
     def phi_x1(x_t, L):
         return T.concatenate([L[x_t].reshape((-1,)), zeros((2*lenW,)), zeros((3,))], axis=0)
     def phi_x2(x_t, L):
@@ -41,8 +41,9 @@ def get_train(U_Ot, U_R, lenW):
         return T.concatenate([zeros(3*lenW,), T.stack(T.switch(T.lt(x_t,y_t), 1, 0), T.switch(T.lt(x_t,yp_t), 1, 0), T.switch(T.lt(y_t,yp_t), 1, 0))], axis=0)
     def s_Ot(xs, y_t, yp_t, L):
         result, updates = theano.scan(
-            lambda x_t, t: T.dot(T.dot(T.switch(T.eq(t, 0), phi_x1(x_t, L).reshape((1,-1)), phi_x2(x_t, L).reshape((1,-1))), U_Ot.T),
-                                 T.dot(U_Ot, (phi_y(y_t, L) - phi_y(yp_t, L) + phi_t(x_t, y_t, yp_t, L)))),
+            lambda x_t, t: T.switch(T.eq(t, T.shape(L)[0]-1), 0,
+                T.dot(T.dot(T.switch(T.eq(t, 0), phi_x1(x_t, L).reshape((1,-1)), phi_x2(x_t, L).reshape((1,-1))), U_Ot.T),
+                T.dot(U_Ot, (phi_y(y_t, L) - phi_y(yp_t, L) + phi_t(x_t, y_t, yp_t, L))))),
             sequences=[xs, T.arange(T.shape(xs)[0])])
         return result.sum()
     def sR(xs, y_t, L, V):
@@ -53,42 +54,36 @@ def get_train(U_Ot, U_R, lenW):
         return result.sum()
 
     x_t = T.iscalar('x_t')
-    m_o1 = T.iscalar('m_o1')
-    m_o2 = T.iscalar('m_o2')
+    m = [x_t] + [T.iscalar('m_o%d' % i) for i in xrange(n_facts)]
+    f = [T.iscalar('f%d_t' % i) for i in xrange(n_facts)]
     r_t = T.iscalar('r_t')
     gamma = T.scalar('gamma')
-    f1_t = T.iscalar('f1_t')
-    f2_t = T.iscalar('f2_t')
     L = T.fmatrix('L') # list of messages
     V = T.fmatrix('V') # vocab
-#    r_args = T.switch(T.eq(m_o2, -1.0), T.stack(x_t, m_o1), T.stack(x_t, m_o1, m_o2))
-    r_args = T.stack(x_t, m_o1, m_o2)
+    r_args = T.stack(*([x_t] + m))
+
+    cost_arr = [0] * 2 * (len(m)-1)
+    updates_arr = [0] * 2 * (len(m)-1)
+    for i in xrange(len(m)-1):
+        cost_arr[2*i], updates_arr[2*i] = theano.scan(
+                lambda f_bar, t: T.largest(gamma - s_Ot(T.stack(*m[:i+1]), f[i], t, L), 0),
+            sequences=[L, T.arange(T.shape(L)[0])])
+        cost_arr[2*i+1], updates_arr[2*i+1] = theano.scan(
+                lambda f_bar, t: T.largest(gamma + s_Ot(T.stack(*m[:i+1]), f[i], t, L), 0),
+            sequences=[L, T.arange(T.shape(L)[0])])
 
     cost1, u1 = theano.scan(
-        lambda f_bar, t: T.largest(gamma - s_Ot(T.stack(x_t), f1_t, t, L), 0),
-        sequences=[L, T.arange(T.shape(L)[0])])
-
-    cost2, u2 = theano.scan(
-        lambda f_bar, t: T.largest(gamma + s_Ot(T.stack(x_t), t, f1_t, L), 0),
-        sequences=[L, T.arange(T.shape(L)[0])])
-
-    cost3, u3 = theano.scan(
-        lambda f_bar, t: T.largest(gamma - s_Ot(T.stack(x_t, m_o1), f2_t, t, L), 0),
-        sequences=[L, T.arange(T.shape(L)[0])])
-
-    cost4, u4 = theano.scan(
-        lambda f_bar, t: T.largest(gamma + s_Ot(T.stack(x_t, m_o1), t, f2_t, L), 0),
-        sequences=[L, T.arange(T.shape(L)[0])])
-
-    cost5, u5 = theano.scan(
         lambda r_bar, t: T.largest(gamma - sR(r_args, r_t, L, V) + sR(r_args, t, L, V), 0),
         sequences=[V, T.arange(T.shape(V)[0])])
 
-    cost = cost1.sum()  + cost2.sum() + cost3.sum() + cost4.sum() + cost5.sum() - 5*gamma
+    cost = cost1.sum() - 5*gamma
+    for c in cost_arr:
+        cost += c.sum()
+
     g_uo, g_ur = T.grad(cost, [U_Ot, U_R])
 
     train = theano.function(
-        inputs=[x_t, f1_t, f2_t, r_t, m_o1, m_o2, gamma, L, V],
+        inputs=[r_t, gamma, L, V] + m + f,
         outputs=[cost],
         updates=[(U_Ot, U_Ot-0.001*g_uo), (U_R, U_R-0.001*g_ur)])
     return train
@@ -126,6 +121,8 @@ def do_train(lines, L, vectorizer):
     def s_Ot(xs, y_t, yp_t, L):
         result = 0
         for i,x_t in enumerate(xs):
+            if i == len(xs)-1:
+                continue
             x = phi_x1(x_t, L) if i == 0 else phi_x2(x_t, L)
             y = phi_y(y_t, L)
             yp = phi_y(yp_t, L)
@@ -140,34 +137,38 @@ def do_train(lines, L, vectorizer):
     V = vectorizer.transform([v for v in vectorizer.vocabulary_]).toarray().astype(np.float32)
 
     W = 3*lenW + 3
-    U_Ot = theano.shared(np.random.randn(D, W).astype(np.float32))
-    U_R = theano.shared(np.random.randn(D, W).astype(np.float32))
-    train = get_train(U_Ot, U_R, lenW)
+    U_Ot = theano.shared(np.zeros((D, W)).astype(np.float32))
+    U_R = theano.shared(np.zeros((D, W)).astype(np.float32))
+    train = None
 
     for epoch in range(100):
         total_err = 0
         print "*" * 80
         print "epoch: ", epoch
+        n_wrong = 0
         for i,line in enumerate(lines):
             if i % 1000 == 0:
-                print i
+                print "i: ", i, " nwrong: ", n_wrong
             if line['type'] == 'q':
                 refs = line['refs']
-                f1 = refs[0]-1
-                f2 = refs[1]-1 if len(refs) > 1 else -1
+                f = [ref - 1 for ref in refs]
                 id = line['id']-1
                 offset = i-id
                 indices = [idx for idx in range(offset-1, i+1) if lines[idx]['type'] != 'q' or idx == i]
                 memory_list = L[indices]
-                id, f1, f2 = indices.index(offset+id), indices.index(offset+f1), indices.index(offset+f2)
+                orig = lines[indices]
+                id = indices.index(offset+id)
+                f = [indices.index(offset+ref) for ref in f]
+                m = []
+                for j in xrange(len(refs)):
+                    m.append(O_t([id]+f[:j], memory_list, s_Ot))
 
-                m_o1 = O_t([id], memory_list, s_Ot)
-                if f2 != -1:
-                    m_o2 = O_t([id, m_o1], memory_list, s_Ot)
-                else:
-                    m_o2 = -1
+                if m[0] != f[0]:
+                    n_wrong += 1
 
-                err = train(id, f1, f2, H[line['answer']], m_o1, m_o2, gamma, memory_list, V)[0]
+                if train is None:
+                    train = get_train(U_Ot, U_R, lenW, len(refs))
+                err = train(H[line['answer']], gamma, memory_list, V, id, *(m + f))[0]
                 total_err += err
         print "epoch: ", epoch, " err: ", (total_err/len(lines))
     return U_Ot, U_R, V, H, phi_x1, phi_x2, phi_y, phi_t, s_Ot, sR
