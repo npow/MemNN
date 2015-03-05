@@ -84,7 +84,7 @@ def get_train(U_Ot, U_R, lenW, n_facts):
     train = theano.function(
         inputs=[r_t, gamma, L, V] + m + f,
         outputs=[cost],
-        updates=[(U_Ot, U_Ot-0.001*g_uo), (U_R, U_R-0.001*g_ur)])
+        updates=[(U_Ot, U_Ot-0.01*g_uo), (U_R, U_R-0.01*g_ur)])
     return train
 
 def get_lines(fname):
@@ -201,7 +201,7 @@ def do_test(lines, L, vectorizer, U_Ot, U_R, V, H, phi_x1, phi_x2, phi_y, phi_t,
 def main():
     train_lines, test_lines = get_lines(TRAIN_FILE), get_lines(TEST_FILE)
     lines = np.concatenate([train_lines, test_lines], axis=0)
-    vectorizer = CountVectorizer()
+    vectorizer = CountVectorizer(lowercase=False)
     vectorizer.fit([x['text'] + ' ' + x['answer'] if 'answer' in x else x['text'] for x in lines])
     L = vectorizer.transform([x['text'] for x in lines]).toarray().astype(np.float32)
     L_train, L_test = L[xrange(len(train_lines))], L[xrange(len(test_lines),len(lines))]
