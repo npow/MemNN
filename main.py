@@ -68,7 +68,7 @@ def get_train(U_Ot, U_R, lenW, n_facts):
                 lambda f_bar, t: T.largest(gamma - s_Ot(T.stack(*m[:i+1]), f[i], t, L), 0),
             sequences=[L, T.arange(T.shape(L)[0])])
         cost_arr[2*i+1], updates_arr[2*i+1] = theano.scan(
-                lambda f_bar, t: T.largest(gamma + s_Ot(T.stack(*m[:i+1]), f[i], t, L), 0),
+                lambda f_bar, t: T.largest(gamma + s_Ot(T.stack(*m[:i+1]), t, f[i], L), 0),
             sequences=[L, T.arange(T.shape(L)[0])])
 
     cost1, u1 = theano.scan(
