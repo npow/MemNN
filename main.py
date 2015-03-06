@@ -17,10 +17,10 @@ TEST_FILE = sys.argv[2]
 #print "train: ", TRAIN_FILE
 #print "test: ", TEST_FILE
 
-D = 50
-gamma = 0.1
-alpha = 0.001
-epochs = 100
+D = 1000
+gamma = 10.0
+alpha = 0.01
+epochs = 10
 
 def zeros(shape, dtype=np.float32):
     return np.zeros(shape, dtype)
