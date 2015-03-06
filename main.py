@@ -19,6 +19,8 @@ TEST_FILE = sys.argv[2]
 
 D = 50
 gamma = 0.1
+alpha = 0.001
+epochs = 100
 
 def zeros(shape, dtype=np.float32):
     return np.zeros(shape, dtype)
@@ -84,7 +86,7 @@ def get_train(U_Ot, U_R, lenW, n_facts):
     train = theano.function(
         inputs=[r_t, gamma, L, V] + m + f,
         outputs=[cost],
-        updates=[(U_Ot, U_Ot-0.01*g_uo), (U_R, U_R-0.01*g_ur)])
+        updates=[(U_Ot, U_Ot-alpha*g_uo), (U_R, U_R-alpha*g_ur)])
     return train
 
 def get_lines(fname):
@@ -138,7 +140,7 @@ def do_train(lines, L, vectorizer):
     U_R = theano.shared(np.random.randn(D, W).astype(np.float32))
     train = None
 
-    for epoch in range(10):
+    for epoch in range(epochs):
         total_err = 0
         print "*" * 80
         print "epoch: ", epoch
