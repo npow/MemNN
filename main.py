@@ -67,17 +67,17 @@ def get_train(U_Ot, U_R, lenW, n_facts):
     updates_arr = [0] * 2 * (len(m)-1)
     for i in xrange(len(m)-1):
         cost_arr[2*i], updates_arr[2*i] = theano.scan(
-                lambda f_bar, t: T.largest(gamma - s_Ot(T.stack(*m[:i+1]), f[i], t, L), 0),
+                lambda f_bar, t: T.switch(T.eq(t, f[i]), 0, T.largest(gamma - s_Ot(T.stack(*m[:i+1]), f[i], t, L), 0)),
             sequences=[L, T.arange(T.shape(L)[0])])
         cost_arr[2*i+1], updates_arr[2*i+1] = theano.scan(
-                lambda f_bar, t: T.largest(gamma + s_Ot(T.stack(*m[:i+1]), t, f[i], L), 0),
+                lambda f_bar, t: T.switch(T.eq(t, f[i]), 0, T.largest(gamma + s_Ot(T.stack(*m[:i+1]), t, f[i], L), 0)),
             sequences=[L, T.arange(T.shape(L)[0])])
 
     cost1, u1 = theano.scan(
-        lambda r_bar, t: T.largest(gamma - sR(r_args, r_t, L, V) + sR(r_args, t, L, V), 0),
+        lambda r_bar, t: T.switch(T.eq(r_t, t), 0, T.largest(gamma - sR(r_args, r_t, L, V) + sR(r_args, t, L, V), 0)),
         sequences=[V, T.arange(T.shape(V)[0])])
 
-    cost = cost1.sum() - (2*(len(m)-1) + 1) * gamma
+    cost = cost1.sum()
     for c in cost_arr:
         cost += c.sum()
 
