@@ -59,7 +59,7 @@ def get_train(U_Ot, U_R, lenW, n_facts):
     gamma = T.scalar('gamma')
     L = T.fmatrix('L') # list of messages
     V = T.fmatrix('V') # vocab
-    r_args = T.stack(*([x_t] + m))
+    r_args = T.stack(*m)
 
     cost_arr = [0] * 2 * (len(m)-1)
     updates_arr = [0] * 2 * (len(m)-1)
