@@ -158,7 +158,7 @@ def do_train(lines, L, vectorizer):
                 f = [indices.index(offset+ref) for ref in f]
                 m = []
                 for j in xrange(len(refs)):
-                    m.append(O_t([id]+f[:j], memory_list, s_Ot))
+                    m.append(O_t([id]+m[:j], memory_list, s_Ot))
 
                 if m[0] != f[0]:
                     n_wrong += 1
