@@ -14,11 +14,9 @@ TRAIN_FILE='data/en/qa2_two-supporting-facts_train.txt'
 TEST_FILE='data/en/qa2_two-supporting-facts_test.txt'
 TRAIN_FILE = sys.argv[1]
 TEST_FILE = sys.argv[2]
-#print "train: ", TRAIN_FILE
-#print "test: ", TEST_FILE
+gamma = float(sys.argv[3]) if len(sys.argv) == 4 else 0.1
 
 D = 50
-gamma = 0.1
 alpha = 0.01
 epochs = 10
 
@@ -67,10 +65,10 @@ def get_train(U_Ot, U_R, lenW, n_facts):
     updates_arr = [0] * 2 * (len(m)-1)
     for i in xrange(len(m)-1):
         cost_arr[2*i], updates_arr[2*i] = theano.scan(
-                lambda f_bar, t: T.switch(T.eq(t, f[i]), 0, T.largest(gamma - s_Ot(T.stack(*m[:i+1]), f[i], t, L), 0)),
+                lambda f_bar, t: T.switch(T.or_(T.eq(t, f[i]), T.eq(t, T.shape(L)-1)), 0, T.largest(gamma - s_Ot(T.stack(*m[:i+1]), f[i], t, L), 0)),
             sequences=[L, T.arange(T.shape(L)[0])])
         cost_arr[2*i+1], updates_arr[2*i+1] = theano.scan(
-                lambda f_bar, t: T.switch(T.eq(t, f[i]), 0, T.largest(gamma + s_Ot(T.stack(*m[:i+1]), t, f[i], L), 0)),
+                lambda f_bar, t: T.switch(T.or_(T.eq(t, f[i]), T.eq(t, T.shape(L)-1)), 0, T.largest(gamma + s_Ot(T.stack(*m[:i+1]), t, f[i], L), 0)),
             sequences=[L, T.arange(T.shape(L)[0])])
 
     cost1, u1 = theano.scan(
