@@ -10,14 +10,16 @@ import theano
 import theano.tensor as T
 import pyprind
 
+TRAIN_FILE='data/en/qa1_single-supporting-fact_train.txt'
+TEST_FILE='data/en/qa1_single-supporting-fact_test.txt'
 TRAIN_FILE='data/en/qa2_two-supporting-facts_train.txt'
 TEST_FILE='data/en/qa2_two-supporting-facts_test.txt'
-TRAIN_FILE = sys.argv[1]
-TEST_FILE = sys.argv[2]
+#TRAIN_FILE = sys.argv[1]
+#TEST_FILE = sys.argv[2]
 gamma = float(sys.argv[3]) if len(sys.argv) == 4 else 0.1
 
 D = 50
-alpha = 0.01
+alpha = 0.008
 epochs = 10
 
 def zeros(shape, dtype=np.float32):
@@ -134,8 +136,8 @@ def do_train(lines, L, vectorizer):
     V = vectorizer.transform([v for v in vectorizer.vocabulary_]).toarray().astype(np.float32)
 
     W = 3*lenW + 3
-    U_Ot = theano.shared(np.random.randn(D, W).astype(np.float32))
-    U_R = theano.shared(np.random.randn(D, W).astype(np.float32))
+    U_Ot = theano.shared(np.random.uniform(-0.1, 0.1, (D, W)).astype(np.float32))
+    U_R = theano.shared(np.random.uniform(-0.1, 0.1, (D, W)).astype(np.float32))
     train = None
 
     for epoch in range(epochs):
@@ -150,17 +152,14 @@ def do_train(lines, L, vectorizer):
                 refs = line['refs']
                 f = [ref - 1 for ref in refs]
                 id = line['id']-1
-                offset = i-id
-                indices = [idx for idx in range(offset-1, i+1) if lines[idx]['type'] != 'q' or idx == i]
+                indices = [idx for idx in range(i-id-1, i+1)]
                 memory_list = L[indices]
-                orig = lines[indices]
-                id = indices.index(offset+id)
-                f = [indices.index(offset+ref) for ref in f]
-                m = []
+                m = f
+                mm = []
                 for j in xrange(len(refs)):
-                    m.append(O_t([id]+m[:j], memory_list, s_Ot))
+                    mm.append(O_t([id]+m[:j], memory_list, s_Ot))
 
-                if m[0] != f[0]:
+                if mm[0] != f[0]:
                     n_wrong += 1
 
                 if train is None:
@@ -179,10 +178,8 @@ def do_test(lines, L, vectorizer, U_Ot, U_R, V, H, phi_x1, phi_x2, phi_y, phi_t,
         if line['type'] == 'q':
             r = line['answer']
             id = line['id']-1
-            offset = i-id
-            indices = [idx for idx in range(offset-1, i+1) if lines[idx]['type'] != 'q' or idx == i]
+            indices = [idx for idx in range(i-id-1, i+1)]
             memory_list = L[indices]
-            id = indices.index(offset+id)
 
             m_o1 = O_t([id], memory_list, s_Ot)
             m_o2 = O_t([id, m_o1], memory_list, s_Ot)
