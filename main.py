@@ -92,13 +92,16 @@ class Model:
             cost_arr[2*i], _ = theano.scan(
                     lambda f_bar, t: T.switch(T.or_(T.eq(t, f[i]), T.eq(t, T.shape(L)[0]-1)), 0, T.largest(gamma - s_Ot(T.stack(*m[:i+1]), f[i], t, L), 0)),
                 sequences=[L, T.arange(T.shape(L)[0])])
+            cost_arr[2*i] /= T.shape(L)[0]
             cost_arr[2*i+1], _ = theano.scan(
                     lambda f_bar, t: T.switch(T.or_(T.eq(t, f[i]), T.eq(t, T.shape(L)[0]-1)), 0, T.largest(gamma + s_Ot(T.stack(*m[:i+1]), t, f[i], L), 0)),
                 sequences=[L, T.arange(T.shape(L)[0])])
+            cost_arr[2*i+1] /= T.shape(L)[0]
 
         cost1, _ = theano.scan(
             lambda r_bar, t: T.switch(T.eq(r_t, t), 0, T.largest(gamma - sR(r_args, r_t, L, V) + sR(r_args, t, L, V), 0)),
             sequences=[V, T.arange(T.shape(V)[0])])
+        cost1 /= T.shape(V)[0]
 
         cost = cost1.sum()
         for c in cost_arr:
@@ -212,7 +215,7 @@ def main():
     parser.add_argument('--train_file', type=str, default=TRAIN_FILE, help='Train file')
     parser.add_argument('--test_file', type=str, default=TEST_FILE, help='Test file')
     parser.add_argument('--gamma', type=float, default=1, help='Gamma')
-    parser.add_argument('--lr', type=float, default=0.001, help='Learning rate')
+    parser.add_argument('--lr', type=float, default=0.1, help='Learning rate')
     parser.add_argument('--embedding_size', type=int, default=50, help='Embedding size')
     parser.add_argument('--n_epochs', type=int, default=10, help='Num epochs')
     args = parser.parse_args()
