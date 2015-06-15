@@ -201,7 +201,7 @@ def main():
     vectorizer = CountVectorizer(lowercase=False)
     vectorizer.fit([x['text'] + ' ' + x['answer'] if 'answer' in x else x['text'] for x in lines])
     L = vectorizer.transform([x['text'] for x in lines]).toarray().astype(np.float32)
-    L_train, L_test = L[xrange(len(train_lines))], L[xrange(len(test_lines),len(lines))]
+    L_train, L_test = L[:len(train_lines)], L[len(train_lines):]
     U_Ot, U_R, V, H, phi_x1, phi_x2, phi_y, phi_t, s_Ot, sR = do_train(train_lines, L_train, vectorizer)
     do_test(test_lines, L_test, vectorizer, U_Ot, U_R, V, H, phi_x1, phi_x2, phi_y, phi_t, s_Ot, sR)
 
