@@ -1,5 +1,6 @@
 from __future__ import division
 import argparse
+import glob
 import numpy as np
 import sys
 from collections import OrderedDict
@@ -9,9 +10,6 @@ from sklearn.preprocessing import *
 from theano.ifelse import ifelse
 import theano
 import theano.tensor as T
-
-TRAIN_FILE='data/en-10k/qa1_single-supporting-fact_train.txt'
-TEST_FILE='data/en-10k/qa1_single-supporting-fact_test.txt'
 
 def zeros(shape, dtype=np.float32):
     return np.zeros(shape, dtype)
@@ -128,6 +126,7 @@ class Model:
         self.U_Ot = theano.shared(np.random.uniform(-0.1, 0.1, (self.D, W)).astype(np.float32))
         self.U_R = theano.shared(np.random.uniform(-0.1, 0.1, (self.D, W)).astype(np.float32))
 
+        prev_err = None
         for epoch in range(n_epochs):
             total_err = 0
             print "*" * 80
@@ -162,7 +161,11 @@ class Model:
             print "epoch: ", epoch, " err: ", (total_err/len(self.train_lines))
 
             # TODO: use validation set
-            self.test()
+            if prev_err is not None and total_err > prev_err:
+                break
+            else:
+                prev_err = total_err
+                self.test()
         
     def test(self):
         lenW = len(self.vectorizer.vocabulary_)
@@ -212,8 +215,9 @@ def str2bool(v):
 def main():
     parser = argparse.ArgumentParser()
     parser.register('type','bool',str2bool)
-    parser.add_argument('--train_file', type=str, default=TRAIN_FILE, help='Train file')
-    parser.add_argument('--test_file', type=str, default=TEST_FILE, help='Test file')
+    parser.add_argument('--task', type=int, default=1, help='Task#')
+    parser.add_argument('--train_file', type=str, default='', help='Train file')
+    parser.add_argument('--test_file', type=str, default='', help='Test file')
     parser.add_argument('--gamma', type=float, default=1, help='Gamma')
     parser.add_argument('--lr', type=float, default=0.1, help='Learning rate')
     parser.add_argument('--embedding_size', type=int, default=50, help='Embedding size')
@@ -221,7 +225,12 @@ def main():
     args = parser.parse_args()
     print "args: ", args
 
-    model = Model(args.train_file, args.test_file, D=args.embedding_size, gamma=args.gamma, lr=args.lr)
+    train_file = glob.glob('data/en-10k/qa%d_*.txt' % args.task)[0]
+    test_file = glob.glob('data/en-10k/qa%d_*.txt' % args.task)[0]
+    if args.train_file != '' and args.test_file != '':
+        train_file, test_file = args.train_file, args.test_file
+
+    model = Model(train_file, test_file, D=args.embedding_size, gamma=args.gamma, lr=args.lr)
     model.train(args.n_epochs)
 
 if __name__ == '__main__':
