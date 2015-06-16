@@ -15,7 +15,7 @@ Below are the results obtained from the current implementation on [the set of to
 | 8    | 40                | 45   | 77                  | N/A       |
 | 9    | 62                | 64   | 65                  | 67        |
 | 10   | 45                | 54   | 59                  | 54        |
-| 11   | 29                | 72   | 100                 | 39        |
+| 11   | 29                | 72   | 100                 | 46        |
 | 12   | 9                 | 74   | 100                 | 46        |
 | 13   | 26                | 94   | 100                 | 39        |
 | 14   | 19                | 27   | 99                  | 100       |
