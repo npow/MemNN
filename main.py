@@ -166,6 +166,7 @@ class Model:
             else:
                 prev_err = total_err
                 self.test()
+        return prev_err
         
     def test(self):
         lenW = len(self.vectorizer.vocabulary_)
