@@ -5,11 +5,11 @@ Below are the results obtained from the current implementation on [the set of to
 
 | Task#| N-gram Classifier | LSTM | MemNN (Weston 2014) | This Repo |
 |------|-------------------|------|---------------------|-----------|
-| 1    | 36                | 50   | 100                 | 72        |
-| 2    | 2                 | 20   | 100                 | 63        |
-| 3    | 7                 | 20   | 20                  | 8         |
-| 4    | 50                | 61   | 71                  | 64        |
-| 5    | 20                | 70   | 83                  | 80        |
+| 1    | 36                | 50   | 100                 | 76        |
+| 2    | 2                 | 20   | 100                 | 70        |
+| 3    | 7                 | 20   | 20                  | 18        |
+| 4    | 50                | 61   | 71                  | 67        |
+| 5    | 20                | 70   | 83                  | 81        |
 | 6    | 49                | 48   | 47                  | 45        |
 | 7    | 52                | 49   | 68                  | N/A       |
 | 8    | 40                | 45   | 77                  | N/A       |
@@ -25,6 +25,6 @@ Below are the results obtained from the current implementation on [the set of to
 | 18   | 52                | 52   | 57                  | 53        |
 | 19   | 0                 | 8    | 0                   | N/A       |
 | 20   | 76                | 91   | 100                 | 100       |
-| Mean | 34                | 49   | 75                  | 58.4      |
+| Mean | 34                | 49   | 75                  | 60.5      |
 
 
