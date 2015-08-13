@@ -225,8 +225,8 @@ def main():
     args = parser.parse_args()
     print "args: ", args
 
-    train_file = glob.glob('data/en-10k/qa%d_*.txt' % args.task)[0]
-    test_file = glob.glob('data/en-10k/qa%d_*.txt' % args.task)[0]
+    train_file = glob.glob('data/en-10k/qa%d_*train.txt' % args.task)[0]
+    test_file = glob.glob('data/en-10k/qa%d_*test.txt' % args.task)[0]
     if args.train_file != '' and args.test_file != '':
         train_file, test_file = args.train_file, args.test_file
 
