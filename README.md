@@ -1,3 +1,5 @@
+## This repository is deprecated in favor of End-To-End Memory Networks: [npow/MemN2N](https://github.com/npow/MemN2N)
+
 # Description
 This is an implementation of [Memory Networks](http://arxiv.org/abs/1410.3916) in Theano. The dataset can be found [here](http://fb.ai/babi).
 
